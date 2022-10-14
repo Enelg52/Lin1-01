@@ -85,7 +85,7 @@ zone "lin1.local." IN {
 
 zone "10.10.10.in-addr.arpa" IN {
     type master;
-    file "/etc/bind/revert.lin1.local";t
+    file "/etc/bind/revert.lin1.local";
 };
 EOM
 
