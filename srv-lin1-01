@@ -1,0 +1,156 @@
+#!/bin/bash
+
+hostname=srv-lin1-02
+domain=lin1.local
+dnsip=10.10.10.11
+ip=10.10.10.11
+mask=255.255.255.0
+gateway=10.10.10.2
+subnet=10.10.10.0
+rangemin=10.10.10.110
+rangemax=10.10.10.119
+
+dc1=lin1
+dc2=local
+
+domain=$dc1.$dc2
+
+# Set hostname
+hostnamectl set-hostname $hostname
+
+# Set domain
+domain_file=/etc/resolv.conf
+
+cat <<EOM >$domain_file
+domain $domain
+search $domain
+nameserver $dnsip
+EOM
+
+#echo -e "domain $domain\nsearch $domain\nnameserver $dnsip" > /etc/resolv.conf
+
+# Get interface name
+interface=$(ip -o -4 route show to default | awk '{print $5}')
+
+# Set static IP
+#echo -e "# The primary network interface\nallow-hotplug $interface\niface $interface inet static\naddress $ip\nnetmask $mask\ngateway $gateway" > /etc/network/interfaces
+
+staticIP_file=/etc/network/interfaces
+
+cat <<EOM >$staticIP_file
+# The primary network interface
+allow-hotplug $interface
+iface $interface inet static
+address $ip
+netmask $mask
+gateway $gateway
+EOM
+
+# Install and configure DHCP server
+apt-get install isc-dhcp-server -y
+
+dhcp_file=/etc/dhcp/dhcpd.conf
+
+cat <<EOM >$dhcp_file
+default-lease-time 600;
+max-lease-time 7200;
+
+subnet $subnet netmask $mask {
+        range                           $rangemin $rangemax;            # Plage IP à attribuer
+        option domain-name              "$domain";                      # Suffix DNS
+        option domain-name-servers      $ip;                            # DNS
+        option routers                  $gateway;                     # Passerelle
+}
+EOM
+
+# restart
+reboot
+
+
+# Install and configure DNS server
+apt-get install bind9 -y
+
+file=/etc/bind/named.conf.local
+
+cat <<EOM >$file
+//
+// Do any local configuration here
+//
+
+// Consider adding the 1918 zones here, if they are not used in your
+// organization
+//include "/etc/bind/zones.rfc1918";
+
+zone "lin1.local." IN {
+    type master;
+    file "/etc/bind/forward.lin1.local";
+};
+
+zone "10.10.10.in-addr.arpa" IN {
+    type master;
+    file "/etc/bind/revert.lin1.local";t
+};
+EOM
+
+file=/etc/bind/forward.lin1.local
+
+cat <<EOM >$file
+@ IN SOA lin1.local. root.lin1.local. (
+        20170423         ; serial
+        10800              ; refresh
+        3600                ; retry
+        604800             ; expire
+        86400              ; minimum
+)
+
+$TTL 86400
+
+@ IN NS srv-lin1-01.lin1.local.
+
+srv-lin1-01             IN A 10.10.10.11
+srv-lin1-02             IN A 10.10.10.22
+nas-lin1-01             IN A 10.10.10.33
+EOM
+
+file=/etc/bind/revert.lin1.local
+
+cat <<EOM >$file
+$TTL 86400
+
+@ IN SOA lin1.local. root.lin1.local. (
+            2018110501
+            3600
+            900
+            604800
+            86400 )
+
+; Descriptions of names servers for this domain
+@ IN NS SRV-LIN1-01.lin1.local.
+; List of known hosts in this domain
+
+
+11 IN PTR srv-lin1-01.
+22 IN PTR srv02.lin1.local.
+33 IN PTR nas.lin1.local.
+EOM
+
+file=/etc/bind/named.conf.options
+
+cat <<EOM >$file
+options {
+        directory "/var/cache/bind";
+        recursion yes;
+        listen-on { any; };
+
+        forwarders {
+                10.229.60.22;             //adresse dns cpnv
+        };
+
+        dnssec-validation no;
+
+        listen-on-v6 { any; };
+};
+EOM
+
+# restart
+reboot
