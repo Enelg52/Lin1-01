@@ -27,12 +27,12 @@ interface=$(ip -o -4 route show to default | awk '{print $5}')
 # Set static IP
 #echo -e "# The primary network interface\nallow-hotplug $interface\niface $interface inet static\naddress $ip\nnetmask $mask\ngateway $gateway" > /etc/network/interfaces
 
-staticIP_file=/etc/resolv.conf
+staticIP_file=/etc/network/interfaces
 
 cat <<EOM >$staticIP_file
 # The primary network interface
 allow-hotplug $interface
-iface ens32 inet static
+iface $interface inet static
 address $ip
 netmask $mask
 gateway $gateway
