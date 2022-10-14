@@ -1,6 +1,6 @@
 #!/bin/bash
 
-hostname=srv-lin1-02
+hostname=srv-lin1-01
 domain=lin1.local
 dnsip=10.10.10.11
 ip=10.10.10.11
