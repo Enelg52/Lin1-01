@@ -11,12 +11,29 @@ gateway=10.10.10.2
 hostnamectl set-hostname $hostname
 
 # Set domain
-echo -e "domain $domain\nsearch $domain\nnameserver $dnsip" > /etc/resolv.conf
+domain_file=/etc/resolv.conf
+
+cat <<EOM >$domain_file
+domain $domain
+search $domain
+nameserver $dnsip
+EOM
+
+#echo -e "domain $domain\nsearch $domain\nnameserver $dnsip" > /etc/resolv.conf
 
 # Get interface name
 interface=$(ip -o -4 route show to default | awk '{print $5}')
 
 # Set static IP
-echo -e "# The primary network interface\nallow-hotplug $interface\niface $interface inet static\naddress $ip\nnetmask $mask\ngateway $gateway" > /etc/network/interfaces
+#echo -e "# The primary network interface\nallow-hotplug $interface\niface $interface inet static\naddress $ip\nnetmask $mask\ngateway $gateway" > /etc/network/interfaces
 
+staticIP_file=/etc/resolv.conf
 
+cat <<EOM >$staticIP_file
+# The primary network interface
+allow-hotplug $interface
+iface ens32 inet static
+address $ip
+netmask $mask
+gateway $gateway
+EOM
