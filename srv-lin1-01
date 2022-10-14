@@ -63,9 +63,6 @@ subnet $subnet netmask $mask {
 }
 EOM
 
-# restart
-reboot
-
 
 # Install and configure DNS server
 apt-get install bind9 -y
