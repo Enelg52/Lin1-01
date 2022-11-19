@@ -1,0 +1,89 @@
+#!/bin/bash
+dnsDomain=$1
+cpnvDns=$2
+
+# Install and configure DNS server
+apt-get install bind9 -y
+
+file=/etc/bind/named.conf.local
+
+cat <<EOM >$file
+//
+// Do any local configuration here
+//
+
+// Consider adding the 1918 zones here, if they are not used in your
+// organization
+//include "/etc/bind/zones.rfc1918";
+
+zone "$dnsDomain." IN {
+    type master;
+    file "/etc/bind/forward.$dnsDomain";
+};
+
+zone "10.10.10.in-addr.arpa" IN {
+    type master;
+    file "/etc/bind/reverse.$dnsDomain";
+};
+EOM
+
+file=/etc/bind/forward.$dnsDomain
+
+cat <<EOM >$file
+@ IN SOA $dnsDomain. root.$dnsDomain. (
+        20170423         ; serial
+        10800              ; refresh
+        3600                ; retry
+        604800             ; expire
+        86400              ; minimum
+)
+
+\$TTL 86400
+
+@ IN NS srv-lin1-01.$dnsDomain.
+
+srv-lin1-01             IN A 10.10.10.11
+srv-lin1-02             IN A 10.10.10.22
+nas-lin1-01             IN A 10.10.10.33
+EOM
+
+file=/etc/bind/reverse.$dnsDomain
+
+cat <<EOM >$file
+
+\$TTL 86400
+
+@ IN SOA $dnsDomain. root.$dnsDomain. (
+            2018110501
+            3600
+            900
+            604800
+            86400 )
+
+; Descriptions of names servers for this domain
+@ IN NS SRV-LIN1-01.$dnsDomain.
+; List of known hosts in this domain
+
+
+11 IN PTR srv-lin1-01.
+22 IN PTR srv-lin1-02.
+33 IN PTR nas-lin1-01.
+
+EOM
+
+file=/etc/bind/named.conf.options
+
+cat <<EOM >$file
+options {
+        directory "/var/cache/bind";
+        recursion yes;
+        listen-on { any; };
+
+        forwarders {
+                $cpnvDns;             //adresse dns cpnv
+        };
+
+        dnssec-validation no;
+        listen-on-v6 { any; };
+};
+EOM

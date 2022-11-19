@@ -1,0 +1,28 @@
+#!/bin/bash
+
+subnet=$1
+mask=$2
+rangemin=$3
+rangemax=$4
+domain=$5
+ip=$6
+gateway=$7
+
+
+
+# Install and configure DHCP server
+apt-get install isc-dhcp-server -y
+
+dhcp_file=/etc/dhcp/dhcpd.conf
+
+cat <<EOM >$dhcp_file
+default-lease-time 600;
+max-lease-time 7200;
+
+subnet $subnet netmask $mask {
+        range                           $rangemin $rangemax;            # Plage IP à attribuer
+        option domain-name              "$domain";                      # Suffix DNS
+        option domain-name-servers      $ip;                            # DNS
+        option routers                  $gateway;                     # Passerelle
+}
+EOM

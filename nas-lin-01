@@ -1,0 +1,12 @@
+#!/bin/bash
+hostname=nas-lin-01
+domain=lin1.local
+dnsip=10.10.10.33
+ip=10.10.10.11
+mask=255.255.255.0
+gateway=10.10.10.2
+
+
+chmod +x linInit
+./linInit $hostname $domain $dnsip $mask $gateway
+echo "OpenMediaVault is now available at http://nas-lin-01.lin.local"
